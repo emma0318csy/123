@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>詞解小測驗：論仁論孝論君子</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; max-width: 700px; margin: auto; }
+    .question { font-weight: bold; margin-bottom: 1rem; }
+    .options button { display: block; margin: 0.5rem 0; width: 100%; }
+    .feedback { margin-top: 1rem; font-weight: bold; }
+    .progress { margin-bottom: 1rem; font-size: 0.9rem; color: #555; }
+    .review-item { border-bottom: 1px solid #ccc; padding: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>詞解選擇題：論仁論孝論君子</h1>
+  <div class="progress" id="progress"></div>
+  <div id="quiz">
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <button onclick="nextQuestion()">下一題</button>
+  </div>
+  <div id="result" style="display:none;">
+    <h2>🎉 測驗完成</h2>
+    <p id="score"></p>
+    <h3>回顧：</h3>
+    <div id="review"></div>
+  </div>
+
+  <script>
+    let vocab = [];
+    let quizSet = [];
+    let current = 0;
+    let correctCount = 0;
+    let answers = [];
+
+    fetch('../詞解/論仁論孝論君子.json')
+      .then(res => res.json())
+      .then(data => {
+        vocab = data;
+        quizSet = shuffle(vocab).slice(0, 10);
+        nextQuestion();
+      });
+
+    function shuffle(array) {
+      return array.sort(() => Math.random() - 0.5);
+    }
+
+    function nextQuestion() {
+      if (current >= quizSet.length) {
+        showResult();
+        return;
+      }
+
+      document.getElementById('feedback').textContent = '';
+      document.getElementById('progress').textContent =
+        `第 ${current + 1} / ${quizSet.length} 題　|　✅ 正確：${correctCount}　❌ 錯誤：${current - correctCount}`;
+
+      const q = quizSet[current];
+      const wrong = shuffle(vocab.filter(x => x.原文 !== q.原文)).slice(0, 3).map(x => x.詞解);
+      const options = shuffle([q.詞解, ...wrong]);
+
+      document.getElementById('question').textContent = `「${q.原文}」是什麼意思？`;
+      const optDiv = document.getElementById('options');
+      optDiv.innerHTML = '';
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.textContent = opt;
+        btn.onclick = () => {
+          const isCorrect = opt === q.詞解;
+          document.getElementById('feedback').textContent =
+            isCorrect ? '✅ 正確！' : `❌ 錯了，正確答案是：${q.詞解}`;
+          if (isCorrect) correctCount++;
+          answers.push({ term: q.原文, chosen: opt, correct: q.詞解, result: isCorrect });
+        };
+        optDiv.appendChild(btn);
+      });
+
+      current++;
+    }
+
+    function showResult() {
+      document.getElementById('quiz').style.display = 'none';
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('score').textContent = `你答對了 ${correctCount} / ${quizSet.length} 題`;
+
+      const reviewDiv = document.getElementById('review');
+      answers.forEach(ans => {
+        const div = document.createElement('div');
+        div.className = 'review-item';
+        div.innerHTML = `
+          <strong>詞語：</strong>${ans.term}<br/>
+          <strong>你的答案：</strong>${ans.chosen}<br/>
+          <strong>正確答案：</strong>${ans.correct}<br/>
+          <strong>結果：</strong>${ans.result ? '✅ 正確' : '❌ 錯誤'}
+        `;
+        reviewDiv.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
